@@ -17,6 +17,8 @@ interface WorkspaceActions {
   addMessage: (conversationId: string, message: Omit<Message, 'id' | 'timestamp'>) => void
   clearConsoleLogs: () => void
   addConsoleLog: (log: string) => void
+  setIsGenerating: (isGenerating: boolean) => void
+  editMessage: (conversationId: string, messageId: string, newContent: string) => void
 }
 
 export type WorkspaceStore = WorkspaceState & WorkspaceActions
@@ -87,6 +89,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       searchQuery: '',
       activeExercise: defaultExercises[0],
       consoleLogs: ['[System] Workspace initialized. Dark mode active.'],
+      isGenerating: false,
 
       // Actions
       setTheme: (theme) => set({ theme }),
@@ -96,6 +99,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       setActiveConversationId: (activeConversationId) => set({ activeConversationId }),
       setSearchQuery: (searchQuery) => set({ searchQuery }),
       setActiveExercise: (activeExercise) => set({ activeExercise }),
+      setIsGenerating: (isGenerating) => set({ isGenerating }),
       
       createConversation: (category, title) => {
         const id = crypto.randomUUID()
@@ -161,6 +165,26 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       clearConsoleLogs: () => set({ consoleLogs: [] }),
       addConsoleLog: (log) => set((state) => ({
         consoleLogs: [...state.consoleLogs, `[${new Date().toLocaleTimeString()}] ${log}`]
+      })),
+
+      editMessage: (conversationId, messageId, newContent) => set((state) => ({
+        conversations: state.conversations.map((c) => {
+          if (c.id !== conversationId) return c
+          const msgIdx = c.messages.findIndex((m) => m.id === messageId)
+          if (msgIdx === -1) return c
+          
+          // Truncate subsequent messages and update message content
+          const updatedMessages = c.messages.slice(0, msgIdx + 1)
+          updatedMessages[msgIdx] = {
+            ...updatedMessages[msgIdx],
+            content: newContent,
+            timestamp: Date.now()
+          }
+          return {
+            ...c,
+            messages: updatedMessages
+          }
+        })
       }))
     }),
     {

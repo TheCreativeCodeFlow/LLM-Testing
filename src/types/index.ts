@@ -34,6 +34,7 @@ export interface WorkspaceState {
   searchQuery: string
   activeExercise: Exercise | null
   consoleLogs: string[]
+  isGenerating: boolean
 }
 export interface Conversation {
   id: string
