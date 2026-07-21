@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Copy, Check, Edit2, RotateCw, Bot } from 'lucide-react'
 import type { Message } from '@/types'
 import { cn } from '@/lib/utils'
+import { ResponseEvaluator } from './ResponseEvaluator'
 
 interface MessageBubbleProps {
   message: Message
@@ -152,6 +153,12 @@ export function MessageBubble({
         ) : (
           <div className="text-xs text-foreground leading-relaxed font-sans space-y-3">
             {parseContent(message.content, handleCopy, copied)}
+            {isAssistant && !isEditing && (
+              <ResponseEvaluator
+                messageId={message.id}
+                messageContent={message.content}
+              />
+            )}
           </div>
         )}
       </div>
