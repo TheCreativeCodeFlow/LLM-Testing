@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { WorkspaceState, Conversation, Message, PromptCategory, Exercise, CustomPrompt } from '@/types'
+import type { WorkspaceState, Conversation, Message, PromptCategory, Exercise, CustomPrompt, Toast } from '@/types'
 
 interface WorkspaceActions {
   setTheme: (theme: 'light' | 'dark' | 'system') => void
@@ -22,6 +22,9 @@ interface WorkspaceActions {
   setDraftPrompt: (val: string) => void
   toggleFavoritePrompt: (id: string) => void
   addCustomPrompt: (prompt: CustomPrompt) => void
+  setApiOnline: (online: boolean) => void
+  addToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+  removeToast: (id: string) => void
 }
 
 export type WorkspaceStore = WorkspaceState & WorkspaceActions
@@ -96,6 +99,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       draftPrompt: '',
       favoritePromptIds: [],
       customPrompts: [],
+      apiOnline: false,
+      toasts: [],
 
       // Actions
       setTheme: (theme) => set({ theme }),
@@ -205,6 +210,18 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
       addCustomPrompt: (prompt) => set((state) => ({
         customPrompts: [...(state.customPrompts || []), prompt]
+      })),
+
+      setApiOnline: (apiOnline) => set({ apiOnline }),
+
+      addToast: (message, type = 'info', duration = 4000) => set((state) => {
+        const id = crypto.randomUUID()
+        const newToast: Toast = { id, message, type, duration }
+        return { toasts: [...(state.toasts || []), newToast] }
+      }),
+
+      removeToast: (id) => set((state) => ({
+        toasts: (state.toasts || []).filter((t) => t.id !== id)
       }))
     }),
     {

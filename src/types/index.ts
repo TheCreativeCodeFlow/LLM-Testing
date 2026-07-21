@@ -38,6 +38,8 @@ export interface WorkspaceState {
   draftPrompt?: string
   favoritePromptIds?: string[]
   customPrompts?: CustomPrompt[]
+  apiOnline?: boolean
+  toasts?: Toast[]
 }
 export interface Conversation {
   id: string
@@ -55,4 +57,11 @@ export interface CustomPrompt {
   category: string
   content: string
   isCustom?: boolean
+}
+
+export interface Toast {
+  id: string
+  message: string
+  type: 'info' | 'success' | 'warning' | 'error'
+  duration?: number
 }

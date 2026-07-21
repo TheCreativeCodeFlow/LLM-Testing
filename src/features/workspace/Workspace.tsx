@@ -15,90 +15,8 @@ import { useWorkspaceStore, defaultExercises } from '@/store/workspaceStore'
 import { MessageBubble } from './MessageBubble'
 import { ChatInput } from './ChatInput'
 import { PromptLibrary } from './PromptLibrary'
-
-// Mock DSA Tutor full responses carrying Markdown, Code, Tables, and Math
-const getTutorResponseText = (category: string, title: string, _userMsg: string): string => {
-  
-  if (category === 'Concept Learning') {
-    return `Here is a complete conceptual overview of the **${title}** pattern.
-
-### 📚 Algorithmic Concept
-The core idea is to achieve optimal runtime by trading space complexity. Instead of doing nested scans, we store visited elements and index targets in a single-pass lookup.
-
-### ⏱️ Time & Space Complexity Table
-| Approach | Time Complexity | Space Complexity | Recommendation |
-|:---|:---|:---|:---|
-| Brute Force | $O(N^2)$ | $O(1)$ | Avoid in Production |
-| Optimized HashMap | $O(N)$ | $O(N)$ | Highly Recommended |
-
-### 📐 Mathematical Equality
-For target $T$ and array index value $x$, we want to solve:
-$$x + y = T \\implies y = T - x$$
-Where $y$ represents the lookup complement.
-
-### 💻 Production Reference Code
-\`\`\`typescript
-function solveProblem(nums: number[], target: number): number[] {
-  // Hash map stores values and their index counterparts
-  const store = new Map<number, number>();
-  
-  for (let i = 0; i < nums.length; i++) {
-    const complement = target - nums[i];
-    if (store.has(complement)) {
-      return [store.get(complement)!, i];
-    }
-    store.set(nums[i], i);
-  }
-  return []; // default fallback
-}
-\`\`\`
-Let me know what specific section you want to step through!`
-  }
-
-  if (category === 'Problem Solving') {
-    return `Let's break down the step-by-step strategy to solve **${title}**:
-
-1. **Understand Constraints**: Ask about empty arrays, duplicates, or negative targets.
-2. **Formulate Complement**: For value $v$, search for $T - v$.
-3. **Map Storage**: Save visited indices into a Map container.
-
-Here is a quick look at how the map updates:
-| Index scanned | Map state | Comparison | Match |
-|:---|:---|:---|:---|
-| 0 (val: 2) | \`{ 2: 0 }\` | $9 - 2 = 7$ (Not in map) | No |
-| 1 (val: 7) | \`{ 2: 0, 7: 1 }\` | $9 - 7 = 2$ (Match found!) | Yes (index 0, 1) |`
-  }
-
-  if (category === 'Hint Mode') {
-    return `💡 **Hint for ${title}**:
-- Avoid using two loops ($O(N^2)$).
-- Think about how to recall values you have *already* seen.
-- Check out the mathematical balance: $Complement = Target - CurrentNode$.`
-  }
-
-  if (category === 'Debugging') {
-    return `🐛 **Debugging Checklist**:
-- **Index Out of Bounds**: Make sure you terminate iteration before array index boundaries.
-- **Reference checking**: Verify node pointer references (\`node.next\`) are not null before dereferencing.
-- **Memory footprint**: Ensure you do not allocate duplicate nested data structures inside your iterations.`
-  }
-
-  if (category === 'Interview Practice') {
-    return `💼 **Interview Preparation Tips**:
-- Clearly state the Brute Force complexity ($O(N^2)$) first.
-- Ask the interviewer if the input is already sorted. (If it is sorted, a **Two-Pointer** scan achieves $O(1)$ space and $O(N)$ time!).
-- Discuss space vs time trade-offs ($O(N)$ HashMap space is completely fine in high-throughput applications).`
-  }
-
-  if (category === 'Code Review') {
-    return `🔍 **Code Review for ${title}**:
-- **Formatting**: The code is well-structured and typed.
-- **Safety**: Excellent use of TypeScript optional chaining.
-- **Complexity**: Optimized linear scan $O(N)$ time complexity.`
-  }
-
-  return `🤖 **Tutor Coach**: I am ready to review your algorithm code or answer questions about **${title}**. What would you like to focus on next?`
-}
+import { apiService } from '@/services/apiService'
+import { ToastContainer } from './ToastContainer'
 
 export function Workspace() {
   const {
@@ -128,7 +46,7 @@ export function Workspace() {
 
   // Refs
   const chatContainerRef = useRef<HTMLDivElement>(null)
-  const streamTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
 
   // Find current active conversation
@@ -143,6 +61,15 @@ export function Workspace() {
       setIsPlaying(false)
     }
   }, [activeExercise])
+
+  // Periodic health checking
+  useEffect(() => {
+    apiService.checkHealth()
+    const checkTimer = setInterval(() => {
+      apiService.checkHealth()
+    }, 15000)
+    return () => clearInterval(checkTimer)
+  }, [])
 
   // Playback timer for visualizer
   useEffect(() => {
@@ -180,69 +107,84 @@ export function Workspace() {
 
   // Stop current streaming generation
   const handleStopGeneration = () => {
-    if (streamTimerRef.current) {
-      clearInterval(streamTimerRef.current)
-      streamTimerRef.current = null
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
     }
     setIsGenerating(false)
     setShowSkeleton(false)
     addConsoleLog('Streaming generation halted by user.')
   }
 
-  // Streaming simulated responder logic
-  const triggerStream = (textToSend: string, messageIdToReplace?: string) => {
+  // Streaming responder logic hitting FastAPI backend
+  const triggerStream = async (textToSend: string, messageIdToReplace?: string) => {
     if (!activeConversationId) return
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
 
     setIsGenerating(true)
     setShowSkeleton(true)
-    addConsoleLog(`Querying AI Tutor in prompt mode: "${activeCategory}"`)
+    addConsoleLog(`Querying FastAPI backend in prompt mode: "${activeCategory}"`)
 
-    setTimeout(() => {
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
+    // Let's create an empty message inside the list first, or reuse if editing
+    let targetMessageId = messageIdToReplace
+    
+    if (!targetMessageId) {
+      // Appending new empty assistant response
+      addMessage(activeConversationId, {
+        role: 'assistant',
+        content: '',
+      })
+      // Fetch newly created message ID
+      const currentConv = useWorkspaceStore.getState().conversations.find((c) => c.id === activeConversationId)
+      if (currentConv && currentConv.messages.length > 0) {
+        targetMessageId = currentConv.messages[currentConv.messages.length - 1].id
+      }
+    }
+
+    if (!targetMessageId) {
+      setIsGenerating(false)
       setShowSkeleton(false)
-      const fullReply = getTutorResponseText(activeCategory, activeExercise?.title || '', textToSend)
-      
-      // Let's create an empty message inside the list first, or reuse if editing
-      let targetMessageId = messageIdToReplace
-      
-      if (!targetMessageId) {
-        // Appending new empty assistant response
-        addMessage(activeConversationId, {
-          role: 'assistant',
-          content: '',
-        })
-        // Fetch newly created message ID
-        const currentConv = useWorkspaceStore.getState().conversations.find((c) => c.id === activeConversationId)
-        if (currentConv && currentConv.messages.length > 0) {
-          targetMessageId = currentConv.messages[currentConv.messages.length - 1].id
+      return
+    }
+
+    let compiledContent = ''
+
+    try {
+      await apiService.streamTutorResponse(
+        activeCategory,
+        textToSend,
+        {
+          onChunk: (chunk) => {
+            setShowSkeleton(false)
+            compiledContent += chunk
+            editMessage(activeConversationId, targetMessageId!, compiledContent)
+          },
+          signal: controller.signal,
         }
+      )
+      addConsoleLog('AI Tutor response complete.')
+    } catch (err) {
+      const error = err as Error
+      if (error.name === 'AbortError') {
+        addConsoleLog('AI Tutor response aborted by user.')
+      } else {
+        editMessage(
+          activeConversationId,
+          targetMessageId!,
+          compiledContent || `⚠️ *Connection Failure: Failed to stream response from backend server (${error.message}). Verify FastAPI backend is running.*`
+        )
       }
-
-      if (!targetMessageId) {
-        setIsGenerating(false)
-        return
-      }
-
-      // Stream character by character
-      let currentLength = 0
-      const incrementSize = 3 // characters per tick for fluid look
-      
-      streamTimerRef.current = setInterval(() => {
-        currentLength += incrementSize
-        const partialContent = fullReply.substring(0, currentLength)
-        
-        editMessage(activeConversationId, targetMessageId!, partialContent)
-        
-        if (currentLength >= fullReply.length) {
-          if (streamTimerRef.current) {
-            clearInterval(streamTimerRef.current)
-            streamTimerRef.current = null
-          }
-          setIsGenerating(false)
-          addConsoleLog('AI Tutor response complete.')
-        }
-      }, 25)
-
-    }, 1000)
+    } finally {
+      setIsGenerating(false)
+      setShowSkeleton(false)
+      abortControllerRef.current = null
+    }
   }
 
   // Handle sending new prompt
@@ -735,6 +677,7 @@ export function Workspace() {
           )}
         </AnimatePresence>
       </div>
+      <ToastContainer />
     </div>
   )
 }

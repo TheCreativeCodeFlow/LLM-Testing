@@ -32,6 +32,7 @@ export function DeveloperPanel() {
     clearConsoleLogs,
     addConsoleLog,
     isGenerating,
+    apiOnline,
   } = useWorkspaceStore()
 
   // Tabs: 'tests' | 'console' | 'telemetry'
@@ -275,10 +276,17 @@ export function DeveloperPanel() {
                   {/* Status Indicator Row */}
                   <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
                     <span className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">LLM Stats</span>
-                    <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/25">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-[9px] font-bold text-emerald-500 tracking-wider uppercase">API: ONLINE</span>
-                    </div>
+                    {apiOnline ? (
+                      <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/25">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[9px] font-bold text-emerald-500 tracking-wider uppercase">API: ONLINE</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/25 animate-pulse">
+                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                        <span className="text-[9px] font-bold text-rose-500 tracking-wider uppercase">API: OFFLINE</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* 16 Telemetry Metric Cards Grid */}
