@@ -130,13 +130,15 @@ export function Sidebar() {
   }
 
   return (
-    <motion.div
+    <motion.aside
       layout
       animate={{ width: leftSidebarCollapsed ? 64 : 290 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
       onKeyDown={handleKeyDown}
       tabIndex={0}
       className="relative z-20 flex h-full flex-col border-r border-border bg-card/45 backdrop-blur-md outline-none select-none"
+      role="complementary"
+      aria-label="Sidebar navigation"
     >
       {/* Header */}
       <div className="flex h-14 items-center justify-between px-3 border-b border-border/60">
@@ -156,6 +158,7 @@ export function Sidebar() {
         <button
           onClick={toggleLeftSidebar}
           className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border/80 bg-background/50 hover:bg-accent hover:text-accent-foreground transition-all duration-200 ml-auto"
+          aria-label={leftSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={leftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
           {leftSidebarCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
@@ -166,6 +169,7 @@ export function Sidebar() {
       <div className="p-3">
         {leftSidebarCollapsed ? (
           <button
+            aria-label="New chat"
             onClick={() => {
               const newId = createConversation(activeCategory)
               addConsoleLog(`Created new session: ${activeCategory}`)
@@ -178,6 +182,7 @@ export function Sidebar() {
           </button>
         ) : (
           <button
+            aria-label="New chat"
             onClick={() => {
               const newId = createConversation(activeCategory)
               addConsoleLog(`Created new session: ${activeCategory}`)
@@ -197,6 +202,7 @@ export function Sidebar() {
           <div className="relative">
             <Search className="absolute top-2.5 left-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <input
+              aria-label="Search conversations"
               type="text"
               placeholder="Search conversations..."
               value={searchQuery}
@@ -218,6 +224,7 @@ export function Sidebar() {
           return (
             <button
               key={cat.name}
+              aria-label={`Switch prompt category to ${cat.name}`}
               onClick={() => {
                 setActiveCategory(cat.name)
                 setFocusedIndex(-1)
@@ -420,7 +427,7 @@ export function Sidebar() {
           }}
         />
       )}
-    </motion.div>
+    </motion.aside>
   )
 }
 

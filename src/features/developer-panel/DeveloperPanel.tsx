@@ -97,17 +97,20 @@ export function DeveloperPanel() {
   }
 
   return (
-    <motion.div
+    <motion.aside
       layout
       animate={{ width: rightPanelCollapsed ? 48 : 320 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
       className="relative z-20 flex h-full flex-col border-l border-border bg-card/45 backdrop-blur-md overflow-hidden select-none"
+      role="complementary"
+      aria-label="Developer diagnostics panel"
     >
       {/* Header and Toggle Button */}
       <div className="flex h-14 items-center justify-between px-3 border-b border-border/60">
         <button
           onClick={toggleRightPanel}
           className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border/80 bg-background/50 hover:bg-accent hover:text-accent-foreground transition-all duration-200"
+          aria-label={rightPanelCollapsed ? 'Expand developer panel' : 'Collapse developer panel'}
           title={rightPanelCollapsed ? 'Expand Panel' : 'Collapse Panel'}
         >
           {rightPanelCollapsed ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
@@ -443,7 +446,7 @@ export function DeveloperPanel() {
           </div>
         </div>
       )}
-    </motion.div>
+    </motion.aside>
   )
 }
 export default DeveloperPanel

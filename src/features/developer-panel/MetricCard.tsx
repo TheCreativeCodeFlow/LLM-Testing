@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -10,7 +11,7 @@ interface MetricCardProps {
   className?: string
 }
 
-export function MetricCard({
+export const MetricCard = memo(function MetricCard({
   title,
   value,
   unit,
@@ -48,5 +49,5 @@ export function MetricCard({
       )}
     </div>
   )
-}
+})
 export default MetricCard

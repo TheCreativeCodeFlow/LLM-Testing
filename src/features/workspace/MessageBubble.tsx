@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, memo } from 'react'
 import { motion } from 'framer-motion'
 import { Copy, Check, Edit2, RotateCw, Bot } from 'lucide-react'
 import type { Message } from '@/types'
@@ -12,7 +12,7 @@ interface MessageBubbleProps {
   isGenerating?: boolean
 }
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   message,
   onEditSubmit,
   onRegenerate,
@@ -164,7 +164,13 @@ export function MessageBubble({
       </div>
     </motion.div>
   )
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.isGenerating === nextProps.isGenerating
+  )
+})
 
 // Markdown Parser Helper
 function parseContent(text: string, onCopy: (text: string) => void, copied: boolean) {

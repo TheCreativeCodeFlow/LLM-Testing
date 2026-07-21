@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Play,
@@ -14,7 +14,10 @@ import {
 import { useWorkspaceStore, defaultExercises } from '@/store/workspaceStore'
 import { MessageBubble } from './MessageBubble'
 import { ChatInput } from './ChatInput'
-import { PromptLibrary } from './PromptLibrary'
+import { LibrarySkeleton } from '@/components/LoadingFallback'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+
+const PromptLibrary = lazy(() => import('./PromptLibrary'))
 import { apiService } from '@/services/apiService'
 import { ToastContainer } from './ToastContainer'
 
@@ -480,7 +483,11 @@ export function Workspace() {
               transition={{ duration: 0.15 }}
               className="flex-1 overflow-y-auto p-4 bg-background"
             >
-              <PromptLibrary onSelectPrompt={handleSelectPromptFromLibrary} />
+              <ErrorBoundary>
+                <Suspense fallback={<LibrarySkeleton />}>
+                  <PromptLibrary onSelectPrompt={handleSelectPromptFromLibrary} />
+                </Suspense>
+              </ErrorBoundary>
             </motion.div>
           ) : (
             // Playground Code Editor + Visualizer split view (Same as before)
