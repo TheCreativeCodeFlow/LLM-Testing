@@ -9,10 +9,12 @@ import {
   Sparkles,
   MessageSquare,
   Bot,
+  BookOpen,
 } from 'lucide-react'
 import { useWorkspaceStore, defaultExercises } from '@/store/workspaceStore'
 import { MessageBubble } from './MessageBubble'
 import { ChatInput } from './ChatInput'
+import { PromptLibrary } from './PromptLibrary'
 
 // Mock DSA Tutor full responses carrying Markdown, Code, Tables, and Math
 const getTutorResponseText = (category: string, title: string, _userMsg: string): string => {
@@ -112,8 +114,8 @@ export function Workspace() {
     setIsGenerating,
   } = useWorkspaceStore()
 
-  // Tab state: 'chat' | 'playground'
-  const [activeTab, setActiveTab] = useState<'chat' | 'playground'>('chat')
+  // Tab state: 'chat' | 'playground' | 'library'
+  const [activeTab, setActiveTab] = useState<'chat' | 'playground' | 'library'>('chat')
   
   // Chat input states
   const [showSkeleton, setShowSkeleton] = useState(false)
@@ -313,12 +315,19 @@ export function Workspace() {
     }
   }
 
+  // Handle prompt library selection
+  const handleSelectPromptFromLibrary = (promptText: string) => {
+    const setDraftPrompt = useWorkspaceStore.getState().setDraftPrompt
+    setDraftPrompt(promptText)
+    setActiveTab('chat')
+  }
+
   // Code editor lines
   const editorLineNumbers = Array.from({ length: 28 }, (_, i) => i + 1)
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background select-none min-w-0">
-      {/* Top Header Split Selector (Tutor Chat vs Code Playground) */}
+      {/* Top Header Split Selector (Tutor Chat vs Code Playground vs Library) */}
       <div className="flex h-14 items-center justify-between px-4 border-b border-border/60 bg-card/15">
         <div className="flex items-center gap-1.5 border border-border/80 bg-background/50 p-0.5 rounded-lg shadow-sm">
           <button
@@ -342,6 +351,17 @@ export function Workspace() {
           >
             <Code2 size={13} />
             <span>💻 Code Playground</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('library')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+              activeTab === 'library'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            }`}
+          >
+            <BookOpen size={13} />
+            <span>📚 Prompt Library</span>
           </button>
         </div>
 
@@ -376,6 +396,12 @@ export function Workspace() {
               <Play size={11} fill="currentColor" />
               <span>Run Code</span>
             </button>
+          </div>
+        ) : activeTab === 'library' ? (
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-bold text-muted-foreground/60 tracking-wider bg-secondary/40 px-2 py-0.5 rounded uppercase">
+              Tutor Prompts
+            </span>
           </div>
         ) : (
           <div className="flex items-center gap-3">
@@ -502,6 +528,17 @@ export function Workspace() {
                   />
                 </div>
               )}
+            </motion.div>
+          ) : activeTab === 'library' ? (
+            <motion.div
+              key="library"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="flex-1 overflow-y-auto p-4 bg-background"
+            >
+              <PromptLibrary onSelectPrompt={handleSelectPromptFromLibrary} />
             </motion.div>
           ) : (
             // Playground Code Editor + Visualizer split view (Same as before)

@@ -33,6 +33,20 @@ export function ChatInput({ onSubmit, onStop, isGenerating, placeholder }: ChatI
     }
   }, [value])
 
+  // Listen for draft prompts from the prompt library
+  const draftPrompt = useWorkspaceStore((state) => state.draftPrompt)
+  const setDraftPrompt = useWorkspaceStore((state) => state.setDraftPrompt)
+
+  useEffect(() => {
+    if (draftPrompt) {
+      setTimeout(() => {
+        setValue(draftPrompt)
+        setDraftPrompt('')
+        textareaRef.current?.focus()
+      }, 0)
+    }
+  }, [draftPrompt, setDraftPrompt])
+
   // Clear input states when generation completes or starting
   const handleSubmit = () => {
     if ((!value.trim() && attachments.length === 0) || isGenerating) return

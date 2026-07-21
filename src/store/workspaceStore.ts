@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { WorkspaceState, Conversation, Message, PromptCategory, Exercise } from '@/types'
+import type { WorkspaceState, Conversation, Message, PromptCategory, Exercise, CustomPrompt } from '@/types'
 
 interface WorkspaceActions {
   setTheme: (theme: 'light' | 'dark' | 'system') => void
@@ -19,6 +19,9 @@ interface WorkspaceActions {
   addConsoleLog: (log: string) => void
   setIsGenerating: (isGenerating: boolean) => void
   editMessage: (conversationId: string, messageId: string, newContent: string) => void
+  setDraftPrompt: (val: string) => void
+  toggleFavoritePrompt: (id: string) => void
+  addCustomPrompt: (prompt: CustomPrompt) => void
 }
 
 export type WorkspaceStore = WorkspaceState & WorkspaceActions
@@ -90,6 +93,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       activeExercise: defaultExercises[0],
       consoleLogs: ['[System] Workspace initialized. Dark mode active.'],
       isGenerating: false,
+      draftPrompt: '',
+      favoritePromptIds: [],
+      customPrompts: [],
 
       // Actions
       setTheme: (theme) => set({ theme }),
@@ -185,6 +191,20 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
             messages: updatedMessages
           }
         })
+      })),
+
+      setDraftPrompt: (draftPrompt) => set({ draftPrompt }),
+
+      toggleFavoritePrompt: (id) => set((state) => {
+        const favs = state.favoritePromptIds || []
+        const nextFavs = favs.includes(id)
+          ? favs.filter((fId) => fId !== id)
+          : [...favs, id]
+        return { favoritePromptIds: nextFavs }
+      }),
+
+      addCustomPrompt: (prompt) => set((state) => ({
+        customPrompts: [...(state.customPrompts || []), prompt]
       }))
     }),
     {
@@ -195,7 +215,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         rightPanelCollapsed: state.rightPanelCollapsed,
         conversations: state.conversations,
         activeConversationId: state.activeConversationId,
-        activeCategory: state.activeCategory
+        activeCategory: state.activeCategory,
+        favoritePromptIds: state.favoritePromptIds,
+        customPrompts: state.customPrompts
       })
     }
   )

@@ -35,6 +35,9 @@ export interface WorkspaceState {
   activeExercise: Exercise | null
   consoleLogs: string[]
   isGenerating: boolean
+  draftPrompt?: string
+  favoritePromptIds?: string[]
+  customPrompts?: CustomPrompt[]
 }
 export interface Conversation {
   id: string
@@ -44,4 +47,12 @@ export interface Conversation {
   pinned: boolean
   createdAt: number
   exerciseId?: string
+}
+
+export interface CustomPrompt {
+  id: string
+  title: string
+  category: string
+  content: string
+  isCustom?: boolean
 }
