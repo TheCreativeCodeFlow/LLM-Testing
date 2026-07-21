@@ -1,7 +1,24 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Terminal, CheckCircle2, Bot, Send, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Terminal,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Cpu,
+  Layers,
+  Settings,
+  Activity,
+  Zap,
+  Clock,
+  Compass,
+  Database,
+  BarChart,
+  HardDrive,
+  Trash2,
+} from 'lucide-react'
 import { useWorkspaceStore } from '@/store/workspaceStore'
+import { MetricCard } from './MetricCard'
 
 export function DeveloperPanel() {
   const {
@@ -13,73 +30,65 @@ export function DeveloperPanel() {
     activeExercise,
     consoleLogs,
     clearConsoleLogs,
-    addMessage,
     addConsoleLog,
+    isGenerating,
   } = useWorkspaceStore()
 
-  // Tabs: 'tests' | 'console' | 'ai'
-  const [activeTab, setActiveTab] = useState<'tests' | 'console' | 'ai'>('tests')
+  // Tabs: 'tests' | 'console' | 'telemetry'
+  const [activeTab, setActiveTab] = useState<'tests' | 'console' | 'telemetry'>('telemetry')
 
-  // Local chat input state
-  const [chatInput, setChatInput] = useState('')
-  const chatBottomRef = useRef<HTMLDivElement>(null)
+  // Interactive Model Configs
+  const [temperature, setTemperature] = useState(0.7)
+  const [topP, setTopP] = useState(0.95)
+  const [topK, setTopK] = useState(40)
+  const [maxTokens, setMaxTokens] = useState(2048)
+
+  // Simulated Telemetry state
+  const [latency, setLatency] = useState(185)
+  const [outputTokens, setOutputTokens] = useState(0)
+  const [genTime, setGenTime] = useState(0)
+  const [tokensPerSec, setTokensPerSec] = useState(0)
 
   // Find active conversation
   const currentConversation = conversations.find((c) => c.id === activeConversationId)
 
-  // Auto scroll chat to bottom
+  // Calculate dynamic input tokens based on messages characters
+  const totalChars = currentConversation?.messages.reduce((acc, m) => acc + m.content.length, 0) || 0
+  const inputTokens = totalChars > 0 ? Math.ceil(totalChars / 4.2) : 0
+
+  // Telemetry loop synchronizer
   useEffect(() => {
-    if (chatBottomRef.current) {
-      chatBottomRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [currentConversation?.messages])
+    let interval: ReturnType<typeof setInterval> | null = null
 
-  // Mock AI responses based on Category
-  const getMockAIResponse = (category: string, userMsg: string): string => {
-    const lowercaseMsg = userMsg.toLowerCase()
-    if (category === 'Concept Learning') {
-      if (lowercaseMsg.includes('time complexity') || lowercaseMsg.includes('big o')) {
-        return '📚 **Big O Complexity**: The time complexity of solving Two Sum with a nested loop is O(N²). However, by using a Hash Map lookup store, we can scan the array once and get O(N) linear time complexity. Let me know if you would like me to detail the math!'
-      }
-      return `📚 **Concept Coach**: Welcome! We are currently in Concept Learning mode focusing on "${activeExercise?.title}". What specific data structure or complexity details would you like me to explain step-by-step?`
-    }
-    if (category === 'Problem Solving') {
-      return `🛠️ **Problem Coach**: To solve "${activeExercise?.title}", think about mapping target offsets. If we know the sum is target, for each index value x, we just need to search if (target - x) is already present. A Map holds these in constant O(1) retrieval time.`
-    }
-    if (category === 'Hint Mode') {
-      return `💡 **Hint**: Look closely at the Visualizer map on the left! It saves values we have already seen. If the complement is already in the map, you can immediately return the indices!`
-    }
-    if (category === 'Debugging') {
-      return `🐛 **Debugger Helper**: Let's check for edge cases. Make sure to handle empty arrays, target values with no solutions, or negative numbers inside the inputs.`
-    }
-    if (category === 'Interview Practice') {
-      return `💼 **Interview Coach**: In an interview, start by explaining the brute force O(N²) approach, then state: "We can optimize this to O(N) by trading space complexity using a Hash Map." This shows excellent analytical progression.`
-    }
-    return `🤖 **Tutor Coach**: I am analyzing your playground progress. Let me know if you need specific advice or optimization recommendations!`
-  }
+    if (isGenerating) {
+      setTimeout(() => {
+        setLatency(Math.floor(Math.random() * 85 + 140)) // TTFT TTFB 140ms - 225ms
+        setGenTime(0.1)
+        setOutputTokens(2)
+        setTokensPerSec(48 + Math.random() * 8)
+      }, 0)
 
-  // Handle sending chat message
-  const handleSendMessage = () => {
-    if (!chatInput.trim() || !activeConversationId) return
-    const userText = chatInput.trim()
-    setChatInput('')
+      interval = setInterval(() => {
+        setGenTime((prevTime) => {
+          const nextTime = Number((prevTime + 0.1).toFixed(1))
+          const currentSpeed = Number((48 + Math.random() * 8).toFixed(1))
+          setTokensPerSec(currentSpeed)
+          setOutputTokens((prevTokens) => prevTokens + Math.ceil(currentSpeed * 0.1))
+          return nextTime
+        })
+      }, 100)
+    } else {
+      if (interval) clearInterval(interval)
+    }
 
-    // Add user message
-    addMessage(activeConversationId, {
-      role: 'user',
-      content: userText,
-    })
-    addConsoleLog('Sent message to AI Tutor.')
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [isGenerating])
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      const responseText = getMockAIResponse(activeCategory, userText)
-      addMessage(activeConversationId, {
-        role: 'assistant',
-        content: responseText,
-      })
-      addConsoleLog('Received feedback from AI Tutor.')
-    }, 1000)
+  // Log hyperparameter shifts
+  const logHyperparameterChange = (name: string, val: number) => {
+    addConsoleLog(`[Telemetry] Hyperparameter ${name} configured to: ${val}`)
   }
 
   return (
@@ -135,18 +144,18 @@ export function DeveloperPanel() {
           <button
             onClick={() => {
               toggleRightPanel()
-              setActiveTab('ai')
+              setActiveTab('telemetry')
             }}
             className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-colors ${
-              activeTab === 'ai' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent'
+              activeTab === 'telemetry' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent'
             }`}
-            title="AI Tutor"
+            title="AI Telemetry"
           >
-            <Bot size={16} />
+            <BarChart size={16} />
           </button>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-grow flex flex-col min-h-0">
           {/* Navigation Tab buttons */}
           <div className="flex border-b border-border/50 bg-background/20 p-1 gap-1">
             <button
@@ -172,15 +181,15 @@ export function DeveloperPanel() {
               <span>Logs</span>
             </button>
             <button
-              onClick={() => setActiveTab('ai')}
+              onClick={() => setActiveTab('telemetry')}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] font-bold tracking-wide uppercase transition ${
-                activeTab === 'ai'
+                activeTab === 'telemetry'
                   ? 'bg-card text-foreground shadow-sm'
                   : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
             >
-              <Bot size={12} />
-              <span>AI Tutor</span>
+              <BarChart size={12} />
+              <span>Telemetry</span>
             </button>
           </div>
 
@@ -246,7 +255,7 @@ export function DeveloperPanel() {
                       <Trash2 size={11} /> Clear
                     </button>
                   </div>
-                  <div className="flex-1 bg-black/40 border border-border/80 rounded-lg p-3 font-mono text-[10px] text-emerald-400 space-y-1 overflow-y-auto leading-[18px] min-h-[220px]">
+                  <div className="flex-grow bg-black/40 border border-border/80 rounded-lg p-3 font-mono text-[10px] text-emerald-400 space-y-1 overflow-y-auto leading-[18px] min-h-[220px]">
                     {consoleLogs.map((log, idx) => (
                       <div key={idx} className="break-all">{log}</div>
                     ))}
@@ -254,82 +263,168 @@ export function DeveloperPanel() {
                 </motion.div>
               )}
 
-              {activeTab === 'ai' && (
+              {activeTab === 'telemetry' && (
                 <motion.div
-                  key="ai"
+                  key="telemetry"
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
                   transition={{ duration: 0.15 }}
-                  className="flex flex-col h-full min-h-[250px]"
+                  className="space-y-4"
                 >
-                  {!activeConversationId ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-                      <Bot size={32} className="text-primary mb-2 animate-bounce" />
-                      <p className="text-[11px] text-muted-foreground">
-                        Create or select a Playground Session in the left sidebar to activate the AI Tutor.
-                      </p>
+                  {/* Status Indicator Row */}
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
+                    <span className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">LLM Stats</span>
+                    <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/25">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[9px] font-bold text-emerald-500 tracking-wider uppercase">API: ONLINE</span>
                     </div>
-                  ) : (
-                    <div className="flex-grow flex flex-col h-full min-h-0">
-                      {/* Messages list */}
-                      <div className="flex-grow overflow-y-auto space-y-3 pr-1 mb-2 max-h-[calc(100vh-270px)]">
-                        <div className="flex gap-2 rounded-lg bg-primary/5 border border-primary/10 p-3 text-[11px] leading-relaxed">
-                          <Bot size={16} className="text-primary shrink-0 mt-0.5" />
-                          <div>
-                            <strong>AI tutor ({activeCategory})</strong>
-                            <p className="mt-1">
-                              Hi! We are working on <strong>{activeExercise?.title}</strong> in prompt mode{' '}
-                              <strong>{activeCategory}</strong>. Ask me for hints or explain complexity analysis!
-                            </p>
-                          </div>
-                        </div>
+                  </div>
 
-                        {currentConversation?.messages.map((msg) => (
-                          <div
-                            key={msg.id}
-                            className={`flex gap-2 rounded-lg border p-3 text-[11px] leading-relaxed ${
-                              msg.role === 'user'
-                                ? 'bg-secondary/20 border-border/50 ml-6'
-                                : 'bg-primary/5 border-primary/10 mr-6'
-                            }`}
-                          >
-                            {msg.role === 'assistant' ? (
-                              <Bot size={16} className="text-primary shrink-0 mt-0.5" />
-                            ) : (
-                              <div className="h-4 w-4 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-[9px] shrink-0 mt-0.5">
-                                U
-                              </div>
-                            )}
-                            <div>
-                              <strong>{msg.role === 'assistant' ? 'AI Tutor' : 'You'}</strong>
-                              <p className="mt-1 white-space-pre-wrap">{msg.content}</p>
-                            </div>
-                          </div>
-                        ))}
-                        <div ref={chatBottomRef} />
-                      </div>
+                  {/* 16 Telemetry Metric Cards Grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <MetricCard
+                      title="Model Name"
+                      value="Gemini 3.5 Flash"
+                      icon={<Cpu size={12} />}
+                    />
+                    <MetricCard
+                      title="Adapter Version"
+                      value="v2.4-dsa"
+                      icon={<Layers size={12} />}
+                    />
+                    <MetricCard
+                      title="Tokenizer"
+                      value="Geist Tiktoken"
+                      icon={<Database size={12} />}
+                    />
+                    <MetricCard
+                      title="Device"
+                      value="Apple M3 Max GPU"
+                      icon={<HardDrive size={12} />}
+                    />
+                    <MetricCard
+                      title="Latency (TTFT)"
+                      value={isGenerating ? 'Calcul...' : `${latency}`}
+                      unit={isGenerating ? undefined : 'ms'}
+                      icon={<Clock size={12} />}
+                      isLoading={isGenerating && latency === 0}
+                    />
+                    <MetricCard
+                      title="Tokens/sec"
+                      value={isGenerating ? tokensPerSec : tokensPerSec > 0 ? tokensPerSec : '0.0'}
+                      unit="tok/s"
+                      icon={<Zap size={12} />}
+                      isLoading={isGenerating && tokensPerSec === 0}
+                    />
+                    <MetricCard
+                      title="Input Tokens"
+                      value={inputTokens}
+                      unit="tokens"
+                      icon={<ChevronRight size={12} />}
+                    />
+                    <MetricCard
+                      title="Output Tokens"
+                      value={isGenerating ? outputTokens : outputTokens > 0 ? outputTokens : '0'}
+                      unit="tokens"
+                      icon={<ChevronLeft size={12} />}
+                    />
+                    <MetricCard
+                      title="Generation Time"
+                      value={isGenerating ? genTime : genTime > 0 ? genTime : '0.0'}
+                      unit="s"
+                      icon={<Activity size={12} />}
+                    />
+                    <MetricCard
+                      title="Context Length"
+                      value="128"
+                      unit="K"
+                      icon={<Compass size={12} />}
+                    />
+                    <MetricCard
+                      title="Tutor Mode"
+                      value={activeCategory}
+                      icon={<Settings size={12} />}
+                      className="col-span-2"
+                    />
+                  </div>
 
-                      {/* Chat Input */}
-                      <div className="flex gap-1.5 border-t border-border/60 pt-2.5 mt-auto">
-                        <input
-                          type="text"
-                          placeholder={`Ask about ${activeCategory}...`}
-                          value={chatInput}
-                          onChange={(e) => setChatInput(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                          className="flex-grow rounded-lg border border-border bg-background/50 px-3 py-2 text-xs outline-none focus:border-primary/80 focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/80"
-                        />
-                        <button
-                          onClick={handleSendMessage}
-                          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground shadow hover:scale-105 active:scale-95 transition"
-                          title="Send message"
-                        >
-                          <Send size={13} />
-                        </button>
+                  {/* Hyperparameters Config Block */}
+                  <div className="border-t border-border/40 pt-4 space-y-3">
+                    <span className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase block">Hyperparameters</span>
+                    
+                    {/* Temperature */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="font-semibold text-foreground/80">Temperature</span>
+                        <span className="font-mono text-primary">{temperature}</span>
                       </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={temperature}
+                        onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                        onMouseUp={() => logHyperparameterChange('Temperature', temperature)}
+                        className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+                      />
                     </div>
-                  )}
+
+                    {/* Top-P */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="font-semibold text-foreground/80">Top-P (Nucleus)</span>
+                        <span className="font-mono text-primary">{topP}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.1"
+                        max="1"
+                        step="0.05"
+                        value={topP}
+                        onChange={(e) => setTopP(parseFloat(e.target.value))}
+                        onMouseUp={() => logHyperparameterChange('Top-P', topP)}
+                        className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+                      />
+                    </div>
+
+                    {/* Top-K */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="font-semibold text-foreground/80">Top-K</span>
+                        <span className="font-mono text-primary">{topK}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="100"
+                        step="1"
+                        value={topK}
+                        onChange={(e) => setTopK(parseInt(e.target.value))}
+                        onMouseUp={() => logHyperparameterChange('Top-K', topK)}
+                        className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+                      />
+                    </div>
+
+                    {/* Max Tokens */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="font-semibold text-foreground/80">Max Tokens</span>
+                        <span className="font-mono text-primary">{maxTokens}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="256"
+                        max="4096"
+                        step="128"
+                        value={maxTokens}
+                        onChange={(e) => setMaxTokens(parseInt(e.target.value))}
+                        onMouseUp={() => logHyperparameterChange('Max Tokens', maxTokens)}
+                        className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+                      />
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
