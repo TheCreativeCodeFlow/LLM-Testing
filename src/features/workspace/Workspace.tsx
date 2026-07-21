@@ -8,12 +8,11 @@ import {
   Code2,
   Sparkles,
   MessageSquare,
-  Send,
-  StopCircle,
   Bot,
 } from 'lucide-react'
 import { useWorkspaceStore, defaultExercises } from '@/store/workspaceStore'
 import { MessageBubble } from './MessageBubble'
+import { ChatInput } from './ChatInput'
 
 // Mock DSA Tutor full responses carrying Markdown, Code, Tables, and Math
 const getTutorResponseText = (category: string, title: string, _userMsg: string): string => {
@@ -117,7 +116,6 @@ export function Workspace() {
   const [activeTab, setActiveTab] = useState<'chat' | 'playground'>('chat')
   
   // Chat input states
-  const [chatInput, setChatInput] = useState('')
   const [showSkeleton, setShowSkeleton] = useState(false)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
 
@@ -246,10 +244,8 @@ export function Workspace() {
   }
 
   // Handle sending new prompt
-  const handleSendPrompt = () => {
-    if (!chatInput.trim() || isGenerating || !activeConversationId) return
-    const text = chatInput.trim()
-    setChatInput('')
+  const handleSendPromptText = (text: string) => {
+    if (!text.trim() || isGenerating || !activeConversationId) return
     
     // Add user message
     addMessage(activeConversationId, {
@@ -443,8 +439,8 @@ export function Workspace() {
                         <button
                           key={idx}
                           onClick={() => {
-                            setChatInput(starter)
-                            addConsoleLog(`Auto-filled prompt starter: "${starter}"`)
+                            addConsoleLog(`Triggered prompt starter: "${starter}"`)
+                            handleSendPromptText(starter)
                           }}
                           className="rounded-lg border border-border/80 bg-background/40 p-2.5 text-left text-[11px] hover:bg-accent/40 text-muted-foreground hover:text-foreground transition"
                         >
@@ -498,35 +494,12 @@ export function Workspace() {
               {/* Chat Input Dock */}
               {activeConversationId && (
                 <div className="p-3 border-t border-border/50 bg-background/25">
-                  <div className="max-w-3xl mx-auto flex gap-2 items-center">
-                    <input
-                      type="text"
-                      placeholder={`Ask me anything about ${activeCategory}...`}
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendPrompt()}
-                      disabled={isGenerating}
-                      className="flex-grow rounded-lg border border-border bg-background/50 px-3 py-2.5 text-xs outline-none focus:border-primary/80 focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/80 disabled:opacity-40 disabled:cursor-not-allowed"
-                    />
-                    
-                    {isGenerating ? (
-                      <button
-                        onClick={handleStopGeneration}
-                        className="flex h-9 px-3.5 items-center justify-center gap-1.5 cursor-pointer rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20 font-semibold text-xs shadow hover:bg-rose-500/20 transition"
-                      >
-                        <StopCircle size={13} />
-                        <span>Stop</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleSendPrompt}
-                        disabled={!chatInput.trim()}
-                        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground shadow hover:scale-105 active:scale-95 disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed transition"
-                      >
-                        <Send size={13} />
-                      </button>
-                    )}
-                  </div>
+                  <ChatInput
+                    onSubmit={handleSendPromptText}
+                    onStop={handleStopGeneration}
+                    isGenerating={isGenerating}
+                    placeholder={`Ask me anything about ${activeCategory}...`}
+                  />
                 </div>
               )}
             </motion.div>
