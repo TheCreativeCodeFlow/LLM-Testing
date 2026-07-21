@@ -1,7 +1,8 @@
 import { useWorkspaceStore } from '@/store/workspaceStore'
 
 const getApiBaseUrl = () => {
-  return import.meta.env.VITE_API_URL || 'http://localhost:8000'
+  const store = useWorkspaceStore.getState()
+  return store.backendUrl || import.meta.env.VITE_API_URL || 'http://localhost:8000'
 }
 
 // Exponential backoff sleep helper
@@ -19,12 +20,13 @@ export const apiService = {
   async checkHealth(): Promise<boolean> {
     const baseUrl = getApiBaseUrl()
     const store = useWorkspaceStore.getState()
+    const timeoutMs = store.apiTimeout || 10000
 
     try {
       const response = await fetch(`${baseUrl}/health`, {
         method: 'GET',
         // short timeout for health check
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(Math.min(timeoutMs, 3000)),
       })
 
       const isOnline = response.ok
@@ -50,7 +52,7 @@ export const apiService = {
   },
 
   /**
-   * Stream LLM/Tutor responses with built-in retries and abort signals
+   * Stream LLM/Tutor responses with built-in retries, timeouts, and abort signals
    */
   async streamTutorResponse(
     category: string,
@@ -60,6 +62,8 @@ export const apiService = {
   ): Promise<void> {
     const baseUrl = getApiBaseUrl()
     const store = useWorkspaceStore.getState()
+    const timeoutMs = store.apiTimeout || 10000
+    const isStreaming = store.streamingEnabled !== false
 
     // Match prompt category to specific FastAPI endpoints
     let endpoint = '/chat'
@@ -72,6 +76,19 @@ export const apiService = {
     let backoffDelay = 500 // starts at 500ms
 
     while (attempt <= maxRetries) {
+      // Setup linked abort controller with timeout
+      const internalController = new AbortController()
+      
+      const timeoutId = setTimeout(() => {
+        internalController.abort(new DOMException('Timeout', 'TimeoutError'))
+      }, timeoutMs)
+
+      if (options.signal) {
+        options.signal.addEventListener('abort', () => {
+          internalController.abort()
+        })
+      }
+
       try {
         if (options.signal?.aborted) {
           throw new DOMException('Aborted', 'AbortError')
@@ -83,8 +100,10 @@ export const apiService = {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ prompt }),
-          signal: options.signal,
+          signal: internalController.signal,
         })
+
+        clearTimeout(timeoutId)
 
         if (!response.ok) {
           throw new Error(`API server returned code ${response.status}`)
@@ -97,6 +116,7 @@ export const apiService = {
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
         let done = false
+        let accumulatedText = ''
 
         while (!done) {
           const { value, done: readerDone } = await reader.read()
@@ -124,17 +144,35 @@ export const apiService = {
             }
 
             if (decodedText) {
-              options.onChunk(decodedText)
+              if (isStreaming) {
+                options.onChunk(decodedText)
+              } else {
+                accumulatedText += decodedText
+              }
             }
           }
+        }
+
+        // If streaming is disabled, deliver the compiled chunk at the end
+        if (!isStreaming && accumulatedText) {
+          options.onChunk(accumulatedText)
         }
 
         // Success: exit retry loop
         return
       } catch (err) {
+        clearTimeout(timeoutId)
+
         // If aborted, stop immediately without retrying
         if (err instanceof DOMException && err.name === 'AbortError') {
           store.addConsoleLog('[System] Streaming request cancelled by user.')
+          throw err
+        }
+
+        // If timeout, report and fail without retries (since timeout was hit)
+        if (err instanceof DOMException && err.name === 'TimeoutError') {
+          store.addConsoleLog('[System] Request timed out.')
+          store.addToast('API Request timed out. Timeout threshold exceeded.', 'error', 5000)
           throw err
         }
 

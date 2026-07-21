@@ -18,6 +18,7 @@ import {
   Monitor,
   Edit2,
   Sparkles,
+  Settings,
 } from 'lucide-react'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import type { PromptCategory, Conversation } from '@/types'
@@ -340,6 +341,13 @@ export function Sidebar() {
               </div>
             </div>
             <div className="flex items-center gap-0.5 rounded-lg border border-border/80 bg-background/50 p-0.5 shadow-sm">
+              <button
+                onClick={() => useWorkspaceStore.getState().setSettingsModalOpen(true)}
+                className="flex h-5 w-5 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150"
+                title="Settings"
+              >
+                <Settings size={11} />
+              </button>
               {(['light', 'dark', 'system'] as const).map((t) => (
                 <button
                   key={t}
@@ -362,19 +370,28 @@ export function Sidebar() {
             </div>
           </>
         ) : (
-          <button
-            onClick={() => {
-              const nextTheme = theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark'
-              setTheme(nextTheme)
-              addConsoleLog(`Theme toggled to: ${nextTheme}`)
-            }}
-            className="mx-auto flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border bg-background/50 text-muted-foreground hover:bg-accent hover:text-foreground transition-all"
-            title={`Current theme: ${theme}. Click to cycle.`}
-          >
-            {theme === 'light' && <Sun size={14} />}
-            {theme === 'dark' && <Moon size={14} />}
-            {theme === 'system' && <Monitor size={14} />}
-          </button>
+          <div className="flex flex-col gap-2 mx-auto">
+            <button
+              onClick={() => useWorkspaceStore.getState().setSettingsModalOpen(true)}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border bg-background/50 text-muted-foreground hover:bg-accent hover:text-foreground transition-all"
+              title="Workspace Settings"
+            >
+              <Settings size={14} />
+            </button>
+            <button
+              onClick={() => {
+                const nextTheme = theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark'
+                setTheme(nextTheme)
+                addConsoleLog(`Theme toggled to: ${nextTheme}`)
+              }}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border bg-background/50 text-muted-foreground hover:bg-accent hover:text-foreground transition-all"
+              title={`Current theme: ${theme}. Click to cycle.`}
+            >
+              {theme === 'light' && <Sun size={14} />}
+              {theme === 'dark' && <Moon size={14} />}
+              {theme === 'system' && <Monitor size={14} />}
+            </button>
+          </div>
         )}
       </div>
 

@@ -33,16 +33,20 @@ export function DeveloperPanel() {
     addConsoleLog,
     isGenerating,
     apiOnline,
+    temperature = 0.7,
+    setTemperature,
+    topP = 0.95,
+    setTopP,
+    topK = 40,
+    setTopK,
+    maxTokens = 2048,
+    setMaxTokens,
   } = useWorkspaceStore()
 
   // Tabs: 'tests' | 'console' | 'telemetry'
   const [activeTab, setActiveTab] = useState<'tests' | 'console' | 'telemetry'>('telemetry')
 
-  // Interactive Model Configs
-  const [temperature, setTemperature] = useState(0.7)
-  const [topP, setTopP] = useState(0.95)
-  const [topK, setTopK] = useState(40)
-  const [maxTokens, setMaxTokens] = useState(2048)
+  // Interactive Model Configs (Bound to store)
 
   // Simulated Telemetry state
   const [latency, setLatency] = useState(185)

@@ -25,6 +25,18 @@ interface WorkspaceActions {
   setApiOnline: (online: boolean) => void
   addToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
   removeToast: (id: string) => void
+  setBackendUrl: (val: string) => void
+  setApiTimeout: (val: number) => void
+  setStreamingEnabled: (val: boolean) => void
+  setShortcutsEnabled: (val: boolean) => void
+  setDeveloperModeEnabled: (val: boolean) => void
+  setTemperature: (val: number) => void
+  setTopP: (val: number) => void
+  setTopK: (val: number) => void
+  setMaxTokens: (val: number) => void
+  setSettingsModalOpen: (val: boolean) => void
+  resetToDefaults: () => void
+  importSettingsAndConversations: (data: string) => boolean
 }
 
 export type WorkspaceStore = WorkspaceState & WorkspaceActions
@@ -101,6 +113,16 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       customPrompts: [],
       apiOnline: false,
       toasts: [],
+      backendUrl: 'http://localhost:8000',
+      apiTimeout: 10000,
+      streamingEnabled: true,
+      shortcutsEnabled: true,
+      developerModeEnabled: true,
+      temperature: 0.7,
+      topP: 0.95,
+      topK: 40,
+      maxTokens: 2048,
+      settingsModalOpen: false,
 
       // Actions
       setTheme: (theme) => set({ theme }),
@@ -222,7 +244,71 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
       removeToast: (id) => set((state) => ({
         toasts: (state.toasts || []).filter((t) => t.id !== id)
-      }))
+      })),
+
+      setBackendUrl: (backendUrl) => set({ backendUrl }),
+      setApiTimeout: (apiTimeout) => set({ apiTimeout }),
+      setStreamingEnabled: (streamingEnabled) => set({ streamingEnabled }),
+      setShortcutsEnabled: (shortcutsEnabled) => set({ shortcutsEnabled }),
+      setDeveloperModeEnabled: (developerModeEnabled) => set({ developerModeEnabled }),
+      setTemperature: (temperature) => set({ temperature }),
+      setTopP: (topP) => set({ topP }),
+      setTopK: (topK) => set({ topK }),
+      setMaxTokens: (maxTokens) => set({ maxTokens }),
+      setSettingsModalOpen: (settingsModalOpen) => set({ settingsModalOpen }),
+
+      resetToDefaults: () => set({
+        theme: 'dark',
+        leftSidebarCollapsed: false,
+        rightPanelCollapsed: false,
+        activeCategory: 'Concept Learning',
+        activeConversationId: null,
+        conversations: [],
+        searchQuery: '',
+        activeExercise: defaultExercises[0],
+        consoleLogs: ['[System] Workspace reset to defaults.'],
+        isGenerating: false,
+        draftPrompt: '',
+        favoritePromptIds: [],
+        customPrompts: [],
+        backendUrl: 'http://localhost:8000',
+        apiTimeout: 10000,
+        streamingEnabled: true,
+        shortcutsEnabled: true,
+        developerModeEnabled: true,
+        temperature: 0.7,
+        topP: 0.95,
+        topK: 40,
+        maxTokens: 2048,
+        settingsModalOpen: false,
+      }),
+
+      importSettingsAndConversations: (dataStr) => {
+        try {
+          const parsed = JSON.parse(dataStr)
+          if (parsed && typeof parsed === 'object') {
+            set((state) => ({
+              theme: parsed.theme || state.theme,
+              backendUrl: parsed.backendUrl || state.backendUrl,
+              apiTimeout: parsed.apiTimeout || state.apiTimeout,
+              streamingEnabled: parsed.streamingEnabled !== undefined ? parsed.streamingEnabled : state.streamingEnabled,
+              shortcutsEnabled: parsed.shortcutsEnabled !== undefined ? parsed.shortcutsEnabled : state.shortcutsEnabled,
+              developerModeEnabled: parsed.developerModeEnabled !== undefined ? parsed.developerModeEnabled : state.developerModeEnabled,
+              temperature: parsed.temperature !== undefined ? parsed.temperature : state.temperature,
+              topP: parsed.topP !== undefined ? parsed.topP : state.topP,
+              topK: parsed.topK !== undefined ? parsed.topK : state.topK,
+              maxTokens: parsed.maxTokens !== undefined ? parsed.maxTokens : state.maxTokens,
+              conversations: Array.isArray(parsed.conversations) ? parsed.conversations : state.conversations,
+              favoritePromptIds: Array.isArray(parsed.favoritePromptIds) ? parsed.favoritePromptIds : state.favoritePromptIds,
+              customPrompts: Array.isArray(parsed.customPrompts) ? parsed.customPrompts : state.customPrompts,
+            }))
+            return true
+          }
+          return false
+        } catch {
+          return false
+        }
+      }
     }),
     {
       name: 'dsa-tutor-workspace-storage',
@@ -234,7 +320,16 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         activeConversationId: state.activeConversationId,
         activeCategory: state.activeCategory,
         favoritePromptIds: state.favoritePromptIds,
-        customPrompts: state.customPrompts
+        customPrompts: state.customPrompts,
+        backendUrl: state.backendUrl,
+        apiTimeout: state.apiTimeout,
+        streamingEnabled: state.streamingEnabled,
+        shortcutsEnabled: state.shortcutsEnabled,
+        developerModeEnabled: state.developerModeEnabled,
+        temperature: state.temperature,
+        topP: state.topP,
+        topK: state.topK,
+        maxTokens: state.maxTokens,
       })
     }
   )

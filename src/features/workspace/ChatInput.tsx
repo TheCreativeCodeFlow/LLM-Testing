@@ -70,6 +70,9 @@ export function ChatInput({ onSubmit, onStop, isGenerating, placeholder }: ChatI
 
   // Handle key shortcuts
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const shortcutsEnabled = useWorkspaceStore.getState().shortcutsEnabled !== false
+    if (!shortcutsEnabled) return
+
     const isEnter = e.key === 'Enter'
     const isCmdOrCtrl = e.metaKey || e.ctrlKey
 

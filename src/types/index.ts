@@ -40,6 +40,16 @@ export interface WorkspaceState {
   customPrompts?: CustomPrompt[]
   apiOnline?: boolean
   toasts?: Toast[]
+  backendUrl?: string
+  apiTimeout?: number
+  streamingEnabled?: boolean
+  shortcutsEnabled?: boolean
+  developerModeEnabled?: boolean
+  temperature?: number
+  topP?: number
+  topK?: number
+  maxTokens?: number
+  settingsModalOpen?: boolean
 }
 export interface Conversation {
   id: string
